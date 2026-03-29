@@ -2,148 +2,350 @@
 #include <chrono>
 #include <fstream>
 #include <cstdio>
+#include <vector>
 
 const std::string TIMER_FILE = "timer_state.txt";
 
+// Represents one active timer stored in memory and in the timer_state.txt file
+struct TimerRecord
+{
+    std::string taskName;
+    long long startTime;
+};
+
 class TimerState
 {
-
 private:
     std::string fileName;
 
 public:
-    TimerState (const std::string& file)
-    : fileName(file)
+    TimerState(const std::string& file)
+        :fileName (file)
     {
+
     }
-
-    bool exists() const;
-    void save(const std::string& taskName, long long startTime);
-    bool load(std::string& taskName, long long& startTime) const;
-    void clear();
-
+    bool saveAll(const std::vector<TimerRecord>& timers) const;
+    std::vector<TimerRecord> loadAll()const;
 };
 
-bool TimerState::exists() const
+// Loads all timers from file.
+// File format per line: taskName|startTime
+// Invalid lines are skipped.
+std::vector<TimerRecord> TimerState::loadAll()const
 {
-    std::ifstream file(fileName);
+    std::vector<TimerRecord> t;
+
+    std::ifstream file (fileName);
+
+    std::string line;
+
+    while (std::getline(file, line))
+    {
+        size_t pos = line.find('|');
+        if( pos == std::string::npos)
+        {
+            continue;
+        }
+        auto taskName = line.substr(0, pos);
+        auto startTimeText = line.substr(pos +1);
+
+        try
+        {
+            long long startTime = stoll(startTimeText);
+            TimerRecord r;
+            r.taskName = taskName;
+            r.startTime = startTime;
+            t.push_back(r);
+        }
+        catch (const std::exception&)
+        {
+            continue;
+        }
+    }
+    return t;
+}
+
+bool timerExists(const std::string& taskName, const std::vector<TimerRecord>& timers)
+{
+    for (const auto& item : timers)
+    {
+        if (item.taskName == taskName)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Rewrites timer file using the current in-memory timer collection.
+bool TimerState::saveAll(const std::vector<TimerRecord>& timers) const
+{
+    std::ofstream file(fileName);
+
+    for (const auto& item : timers)
+    {
+        file << item.taskName << "|" << item.startTime << "\n";
+    }
+
     return file.good();
 }
 
-void TimerState::save(const std::string& taskName, long long startTime )
+// Joins all comand-line arguments from argv[2] onward into one task name.
+std::string getTaskName(int argc, char* argv[])
 {
-    std::ofstream file(fileName);
-    file << taskName << "\n";
-    file << startTime << "\n";
+
+    std::string getTaskName;
+    bool first = true;
+
+    for (int i = 2; i < argc ; i++ )
+    {
+        if (!first)
+        {
+            getTaskName.append(" ");
+            getTaskName.append(argv[i]);
+        }
+        else
+        {
+            getTaskName.append(argv[i]);
+            first = false;
+        }
+    }
+    return getTaskName;
 }
 
-bool TimerState::load(std::string& taskName, long long& startTime) const
-{
-    std::ifstream file(fileName);
 
-    if (!file)
+void startTimer(TimerState& state, int argc, char* argv[])
+{
+    if (argc<3)
     {
-        return false;
+        std::cout << "Enter task name \n";
+        return ;
     }
 
-    return static_cast<bool>(file >> taskName >> startTime);
-}
+    std::string taskName = getTaskName(argc, argv);
 
-void TimerState::clear()
-{
-    std::remove(fileName.c_str());
+    std::vector<TimerRecord> timers = state.loadAll();
 
-}
-
-void printElapsed(const std::string& taskName, long long startTime)
-{
-    auto now = std::chrono::steady_clock::now();
-    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                     now.time_since_epoch()
-                     ).count();
-
-    auto elapsed = nowMs - startTime;
-    auto seconds = elapsed / 1000;
-
-    std::cout << "Task: " << taskName << "\n";
-    std::cout << "Elapsed time: " << seconds << " seconds\n";
-}
-
-void printHelp()
-{
-    std::cout<<"Timer CLI\n\n"
-                 "Commands: \n"
-                 "   start <task> \n"
-                 "   stop \n"
-                 "   status \n"
-                 "   help \n";
-}
-
-void startTimer(TimerState& state, int argc, char *argv[])
-{
-
-
-    if (argc <3)
+    if (timerExists(taskName,timers))
     {
-        std::cout << "Please provide task name\n";
+        std::cout << "Timer with name: " << taskName << " already running \n";
         return;
     }
-    if (state.exists())
-    {
-        std::cout<<"Timer already running \n";
-        return;
-    }
-
-    std::string taskName = argv[2];
 
     auto now = std::chrono::steady_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                   now.time_since_epoch()
                   ).count();
 
-    state.save(taskName,ms);
+    TimerRecord r;
+    r.taskName = taskName;
+    r.startTime = ms;
+    timers.push_back(r);
 
-    std::cout<<"Timer started: " << taskName << "\n";
-
+    if (!state.saveAll(timers))
+    {
+        std::cout << "Timer failed to start \n";
+        return;
+    }
+    std::cout << "Task: " << taskName << " started \n";
 }
 
-void statusTimer(TimerState& state)
+long calcElapsedSeconds (const long long startTime, const long long nowMs)
 {
-    std::string taskName;
-    long long startTime;
+    auto elapsed = nowMs - startTime;
+    auto seconds = elapsed / 1000;
+    return seconds;
+}
 
-    if(!state.load(taskName, startTime))
+std::string toLowerCase (std::string taskName)
+{
+    for (auto& c : taskName)
     {
-        std::cout << "No active timer \n";
+        c = std::tolower((unsigned char)c);
+    }
+    return taskName;
+}
+
+// Performs case-insensitive partial matching against stored timer names.
+// Returns all matching timers.
+std::vector<TimerRecord> findMatches(const std::vector<TimerRecord>& timers,std::string taskName)
+{
+    std::vector <TimerRecord> matches;
+
+    auto normalizedQuery = toLowerCase(taskName);
+
+    for (const auto& item : timers)
+    {
+
+        auto normalizedStored = toLowerCase(item.taskName);
+
+        if (normalizedStored.find(normalizedQuery) != std::string::npos)
+        {
+            matches.push_back(item);
+        }
+    }
+    return matches;
+}
+
+// Prints timer status.
+// If only one timer exists, it is printed directly.
+// If multiple timers exists, a task name must be provided.
+void printTime(TimerState& state,int argc,char* argv[])
+{
+
+    auto timers = state.loadAll();
+
+    auto now = std::chrono::steady_clock::now();
+    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     now.time_since_epoch()
+                                                  ).count();
+
+    if (timers.empty())
+    {
+        std::cout << "No active timers \n ";
+        return;
+    }
+    else if (timers.size() == 1)
+    {
+        std::cout << "Task: " << timers[0].taskName << " elapsed time: " << calcElapsedSeconds(timers[0].startTime, nowMs) << " seconds \n";
+        return;
+    }
+    else if (argc <3)
+    {
+        std::cout << "Enter task name \n ";
         return;
     }
 
-    printElapsed(taskName,startTime);
+    std::string taskName = getTaskName(argc, argv);
+
+    auto matches = findMatches(timers,taskName);
+
+    if (matches.empty())
+    {
+        std::cout << "not found \n";
+    }
+    else if (matches.size() == 1)
+    {
+        std::cout << "Task: " << matches[0].taskName << " elapsed time: " << calcElapsedSeconds(matches[0].startTime, nowMs) << " seconds \n";
+    }
+    else if (matches.size() > 1)
+    {
+        std::cout << "More than one active timer with this name please specify \n";
+        for (const auto& item: matches)
+        {
+            std::cout << item.taskName << " \n";
+        }
+    }
 }
 
-void stopTimer(TimerState& state)
+// Stops a timer.
+// If only one timer exists, it is stopped directly.
+// If multiple timers exists, a task name must be provided.
+void stop(TimerState& state, int argc, char* argv[])
 {
-    std::string taskName;
-    long long startTime;
+    auto timers = state.loadAll();
 
-    if (!state.load(taskName,startTime))
+    auto now = std::chrono::steady_clock::now();
+    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()
+                     ).count();
+
+    if (timers.empty())
     {
-        std::cout << "No active timer \n";
+        std::cout << "no active timer \n";
+        return;
+    }
+    else if (timers.size() == 1)
+    {
+        std::cout << "Task: " << timers[0].taskName << " elapsed time: " << calcElapsedSeconds(timers[0].startTime, nowMs) << " seconds \n";
+        timers.erase(timers.begin() + 0);
+        state.saveAll(timers);
+        std::cout << "Timer has been stopped \n";
+        return;
+    }
+    else if ( argc <3)
+    {
+        std::cout << "enter task name \n";
         return;
     }
 
-    printElapsed(taskName,startTime);
-    state.clear();
-    std::cout << "Timer stopped \n";
+    std::string taskName = getTaskName(argc,argv);
+
+    auto matches = findMatches(timers,taskName);
+
+    if (matches.empty())
+    {
+        std::cout << "not found \n";
+        return;
+    }
+    else if (matches.size() == 1)
+    {
+        std::cout << "Task: " << matches[0].taskName << " elapsed time: " << calcElapsedSeconds(matches[0].startTime, nowMs) << " seconds \n";
+
+        // Remove the exact matched timer from the main collection.
+        // Compare both taskName and startTime to identify the correct record.
+        for (int i=0; i<timers.size(); i++)
+        {
+            if (timers[i].taskName == matches[0].taskName && timers[i].startTime == matches[0].startTime)
+            {
+                timers.erase(timers.begin() + i);
+                break;
+            }
+        }
+
+        state.saveAll(timers);
+
+        std::cout << "Timer has been stopped \n";
+
+        return;
+    }
+    else if (matches.size() >1)
+    {
+        std::cout << "More than one active timer with this name please specify \n";
+        return;
+    }
 }
 
-int main(int argc, char *argv[])
+void printList(TimerState& state)
+{
+    auto timers = state.loadAll();
+
+    auto now = std::chrono::steady_clock::now();
+    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()
+                     ).count();
+    if (timers.empty())
+    {
+        std::cout << "No active timers \n";
+        return;
+    }
+
+    for (const auto& item : timers)
+    {
+
+        std::cout << "Timer: " << item.taskName << " elapsed time: " << calcElapsedSeconds(item.startTime, nowMs) << " seconds \n";
+    }
+}
+
+void printHelp()
+{
+    std::cout <<"CLI timer \n"
+                 "   Commands: \n"
+                 "   start <task> \n"
+                 "   list \n"
+                 "   status <task> \n"
+                 "   stop \n"
+                 "   help \n";
+}
+
+
+int main (int argc, char* argv[])
 {
     TimerState state(TIMER_FILE);
 
     if (argc <2)
     {
-        printHelp();
+        std::cout << "Please enter command or refer to help \n";
         return 0;
     }
 
@@ -153,24 +355,24 @@ int main(int argc, char *argv[])
     {
         startTimer(state,argc,argv);
     }
-
+    else if (command == "list")
+    {
+        printList(state);
+    }
     else if (command == "status")
     {
-        statusTimer(state);
+        printTime(state,argc,argv);
     }
-
     else if (command == "stop")
     {
-        stopTimer(state);
+        stop(state, argc,argv);
     }
-
     else if (command == "help")
     {
         printHelp();
     }
     else
     {
-        std::cout<<"Unknown command";
+        std::cout <<"Unknown command \n";
     }
 }
-
