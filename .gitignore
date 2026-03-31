@@ -1,0 +1,11 @@
+.qtcreator/
+build/
+build-*/
+*.pro.user
+*.pro.user.*
+*.o
+*.obj
+*.exe
+*.out
+*.log
+*.tmp
