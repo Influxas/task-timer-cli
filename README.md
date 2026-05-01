@@ -1,6 +1,6 @@
 # CLI Task Timer (C++)
 
-A command-line timer application built in C++ that allows tracking multiple tasks with persistent storage and flexible matching.
+A command-line timer application built in C++ that allows tracking multiple tasks with persistent storage and word-based task matching system.
 
 ---
 
@@ -24,7 +24,7 @@ A command-line timer application built in C++ that allows tracking multiple task
   * Stops specific timer
   * Handles multiple matches safely
 
-### v2.1 (current)
+### v2.1 
 
 * Refactored into multi-file project structure
 * Separation of concerns:
@@ -34,6 +34,14 @@ A command-line timer application built in C++ that allows tracking multiple task
   * Logic (`TimerLogic`)
 * Improved code readability and maintainability
 * Prepared codebase for future feature expansion
+
+### v2.2 (in progress)
+
+* Replaced substring matching with word-based matching
+* Implemented tokenization using `std::istringstream`
+* Matching now checks if all query words exist in the stored task name
+* Improved handling of ambiguous matches (multiple timers)
+* Selection system for multiple matches currently in development
 
 ---
 
@@ -120,11 +128,15 @@ taskName|startTime
   * logic (`TimerLogic`)
 * Improved code organization and modular design
 
+* Implemented word-based matching using tokenization
+* Used nested loops to compare query words against stored task words
+* Identified ambiguity issues when similar timers exist
+
 ---
 
 ## Future Improvements
 
-* Improve matching (word-based search instead of substring)
+* Add numbered selection for multiple matches
 * Add pause / resume functionality
 * Improve input validation and error handling
 * Add simple UI (e.g. Qt or other framework)

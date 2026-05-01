@@ -1,6 +1,7 @@
 #include "TimerLogic.h"
 #include <chrono>
 #include <iostream>
+#include <sstream>
 
 bool timerExists(const std::string& taskName, const std::vector<TimerRecord>& timers)
 {
@@ -90,20 +91,66 @@ std::string toLowerCase (std::string taskName)
     return taskName;
 }
 
-// Performs case-insensitive partial matching against stored timer names.
+// Splits a string into lowercase words using whitespace as delimiter.
+// Example: "Gym Strength" -> ["gym", "strength"]
+std::vector<std::string> splitWords (const std::string& taskName)
+{
+    std::vector<std::string> words;
+
+    std::istringstream iss(toLowerCase(taskName));
+    std::string word;
+    while (iss >> word)
+    {
+        words.push_back(word);
+    }
+
+
+    return words;
+}
+
+// Performs case-insensitive word-based matching against stored timer names.
+// A timer matches if ALL words in the query exist in the stored task name.
 // Returns all matching timers.
 std::vector<TimerRecord> findMatches(const std::vector<TimerRecord>& timers,std::string taskName)
 {
     std::vector <TimerRecord> matches;
 
-    auto normalizedQuery = toLowerCase(taskName);
+    auto queryWords = splitWords(taskName);
+
+    if (queryWords.empty())
+    {
+        return matches;
+    }
 
     for (const auto& item : timers)
     {
 
-        auto normalizedStored = toLowerCase(item.taskName);
+        bool allWordsMatch = true;
 
-        if (normalizedStored.find(normalizedQuery) != std::string::npos)
+        auto storedWords = splitWords(item.taskName);
+
+        for (int i = 0; i < queryWords.size() ; i++)
+        {
+            bool found = false;
+
+            for (int c = 0; c < storedWords.size() ; c++)
+            {
+
+            if (queryWords[i] == storedWords[c])
+            {
+                found = true;
+                break;
+            }
+
+            }
+
+            if (!found)
+            {
+                allWordsMatch = false;
+            }
+        }
+
+        if (allWordsMatch)
         {
             matches.push_back(item);
         }
