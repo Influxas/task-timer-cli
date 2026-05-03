@@ -158,6 +158,49 @@ std::vector<TimerRecord> findMatches(const std::vector<TimerRecord>& timers,std:
     return matches;
 }
 
+
+int selectMatch(const std::vector<TimerRecord>& matches)
+{
+
+    int counter = 1;
+    int select;
+
+    std::cout << "More than one option with this name, please specify by selecting a timer with coresponding number or 0 to return \n";
+
+    for (const auto& item : matches)
+    {
+        std::cout << counter << ". " << item.taskName << "\n";
+        counter ++;
+    }
+
+    while (true)
+    {
+        std::cout << "Choice: ";
+
+        if  (select == 0)
+        {
+            return -1;
+        }
+
+        if (!(std::cin >> select))
+        {
+            std::cin.clear();
+            std::cin.ignore(1000, '\n');
+
+            continue;
+        }
+
+        if (select < 1 || select > matches.size())
+        {
+            std::cout << "Invalid choise \n";
+            continue;
+        }
+
+        return select -1;
+    }
+}
+
+
 // Prints timer status.
 // If only one timer exists, it is printed directly.
 // If multiple timers exists, a task name must be provided.
@@ -201,11 +244,14 @@ void printTime(TimerState& state,int argc,char* argv[])
     }
     else if (matches.size() > 1)
     {
-        std::cout << "More than one active timer with this name please specify \n";
-        for (const auto& item: matches)
+
+        int idx = selectMatch(matches);
+        if ( idx == -1)
         {
-            std::cout << item.taskName << " \n";
+            std::cout << "Cancelled \n";
+            return;
         }
+        std::cout << "Task: " << matches[idx].taskName << " elapsed time: " << calcElapsedSeconds(matches[idx].startTime, nowMs) << " seconds \n";
     }
 }
 
@@ -272,8 +318,31 @@ void stop(TimerState& state, int argc, char* argv[])
     }
     else if (matches.size() >1)
     {
-        std::cout << "More than one active timer with this name please specify \n";
-        return;
+        {
+            int idx = selectMatch(matches);
+            if ( idx == -1)
+            {
+                std::cout << "Cancelled \n";
+                return;
+            }
+
+            std::cout << "Task: " << matches[idx].taskName << " elapsed time: " << calcElapsedSeconds(matches[idx].startTime, nowMs) << " seconds \n";
+
+            for (int i=0; i<timers.size(); i++)
+            {
+                if (timers[i].taskName == matches[idx].taskName && timers[i].startTime == matches[idx].startTime)
+                {
+                    timers.erase(timers.begin() + i);
+                    break;
+                }
+            }
+
+            state.saveAll(timers);
+
+            std::cout << "Timer has been stopped \n";
+
+            return;
+        }
     }
 }
 
@@ -308,6 +377,7 @@ void printHelp()
                  "   stop \n"
                  "   help \n";
 }
+
 
 
 

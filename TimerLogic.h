@@ -17,6 +17,8 @@ std::string toLowerCase (std::string taskName);
 
 std::vector<TimerRecord> findMatches(const std::vector<TimerRecord>& timers,std::string taskName);
 
+int selectMatch(const std::vector<TimerRecord>& matches);
+
 void printTime(TimerState& state,int argc,char* argv[]);
 
 void stop(TimerState& state, int argc, char* argv[]);

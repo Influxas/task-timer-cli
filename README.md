@@ -35,13 +35,21 @@ A command-line timer application built in C++ that allows tracking multiple task
 * Improved code readability and maintainability
 * Prepared codebase for future feature expansion
 
-### v2.2 (in progress)
+### v2.2 
 
 * Replaced substring matching with word-based matching
 * Implemented tokenization using `std::istringstream`
 * Matching now checks if all query words exist in the stored task name
 * Improved handling of ambiguous matches (multiple timers)
-* Selection system for multiple matches currently in development
+* Introduced foundation for handling ambiguous matches
+
+### v2.3
+
+* Added numbered selection for multiple matching timers
+* User can now select exact timer when names are ambiguous
+* Implemented input validation for selection (invalid input, out-of-range)
+* Added cancel option during selection
+* Integrated selection flow into stop and status commands
 
 ---
 
@@ -136,7 +144,6 @@ taskName|startTime
 
 ## Future Improvements
 
-* Add numbered selection for multiple matches
 * Add pause / resume functionality
 * Improve input validation and error handling
 * Add simple UI (e.g. Qt or other framework)
