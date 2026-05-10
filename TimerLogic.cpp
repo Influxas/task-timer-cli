@@ -82,6 +82,37 @@ long calcElapsedSeconds (const long long startTime, const long long nowMs)
     return seconds;
 }
 
+std::string formatDuration (long seconds)
+{
+
+    long h;
+    long m;
+    long s;
+    long remainder;
+
+    h = seconds / 3600;
+    remainder = seconds % 3600;
+    m = remainder /60 ;
+    remainder =  remainder % 60;
+    s = remainder % 60;
+
+    if (h > 0)
+    {
+        return std::to_string(h) + "h " + std::to_string(m) + "m " + std::to_string(s) + "s";
+
+    }
+    else if (m > 0)
+    {
+        return std::to_string(m) + "m " + std::to_string(s) + "s";
+    }
+    else
+    {
+        return std::to_string(s) + "s";
+    }
+
+
+}
+
 std::string toLowerCase (std::string taskName)
 {
     for (auto& c : taskName)
@@ -221,7 +252,7 @@ void printTime(TimerState& state,int argc,char* argv[])
     }
     else if (timers.size() == 1)
     {
-        std::cout << "Task: " << timers[0].taskName << " elapsed time: " << calcElapsedSeconds(timers[0].startTime, nowMs) << " seconds \n";
+        std::cout << "Task: " << timers[0].taskName << " elapsed time: " << formatDuration(calcElapsedSeconds(timers[0].startTime, nowMs)) << " \n";
         return;
     }
     else if (argc <3)
@@ -240,7 +271,7 @@ void printTime(TimerState& state,int argc,char* argv[])
     }
     else if (matches.size() == 1)
     {
-        std::cout << "Task: " << matches[0].taskName << " elapsed time: " << calcElapsedSeconds(matches[0].startTime, nowMs) << " seconds \n";
+        std::cout << "Task: " << matches[0].taskName << " elapsed time: " << formatDuration(calcElapsedSeconds(matches[0].startTime, nowMs)) << " \n";
     }
     else if (matches.size() > 1)
     {
@@ -251,7 +282,7 @@ void printTime(TimerState& state,int argc,char* argv[])
             std::cout << "Cancelled \n";
             return;
         }
-        std::cout << "Task: " << matches[idx].taskName << " elapsed time: " << calcElapsedSeconds(matches[idx].startTime, nowMs) << " seconds \n";
+        std::cout << "Task: " << matches[idx].taskName << " elapsed time: " << formatDuration(calcElapsedSeconds(matches[idx].startTime, nowMs)) << " \n";
     }
 }
 
@@ -274,7 +305,7 @@ void stop(TimerState& state, int argc, char* argv[])
     }
     else if (timers.size() == 1)
     {
-        std::cout << "Task: " << timers[0].taskName << " elapsed time: " << calcElapsedSeconds(timers[0].startTime, nowMs) << " seconds \n";
+        std::cout << "Task: " << timers[0].taskName << " elapsed time: " << formatDuration(calcElapsedSeconds(timers[0].startTime, nowMs)) << " \n";
         timers.erase(timers.begin() + 0);
         state.saveAll(timers);
         std::cout << "Timer has been stopped \n";
@@ -297,7 +328,7 @@ void stop(TimerState& state, int argc, char* argv[])
     }
     else if (matches.size() == 1)
     {
-        std::cout << "Task: " << matches[0].taskName << " elapsed time: " << calcElapsedSeconds(matches[0].startTime, nowMs) << " seconds \n";
+        std::cout << "Task: " << matches[0].taskName << " elapsed time: " << formatDuration(calcElapsedSeconds(matches[0].startTime, nowMs)) << " \n";
 
         // Remove the exact matched timer from the main collection.
         // Compare both taskName and startTime to identify the correct record.
@@ -326,7 +357,7 @@ void stop(TimerState& state, int argc, char* argv[])
                 return;
             }
 
-            std::cout << "Task: " << matches[idx].taskName << " elapsed time: " << calcElapsedSeconds(matches[idx].startTime, nowMs) << " seconds \n";
+            std::cout << "Task: " << matches[idx].taskName << " elapsed time: " << formatDuration(calcElapsedSeconds(matches[idx].startTime, nowMs)) << " \n";
 
             for (int i=0; i<timers.size(); i++)
             {
@@ -363,7 +394,7 @@ void printList(TimerState& state)
     for (const auto& item : timers)
     {
 
-        std::cout << "Timer: " << item.taskName << " elapsed time: " << calcElapsedSeconds(item.startTime, nowMs) << " seconds \n";
+        std::cout << "Timer: " << item.taskName << " elapsed time: " << formatDuration(calcElapsedSeconds(item.startTime, nowMs)) << " \n";
     }
 }
 

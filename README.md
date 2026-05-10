@@ -51,6 +51,16 @@ A command-line timer application built in C++ that allows tracking multiple task
 * Added cancel option during selection
 * Integrated selection flow into stop and status commands
 
+### v2.4
+
+* Added duration formatting
+* Timer durations now display as:
+  * seconds (`45s`)
+  * minutes + seconds (`5m 12s`)
+  * hours + minutes + seconds (`1h 5m 2s`)
+* Introduced dedicated duration formatting helper function
+* Improved readability of timer output
+
 ---
 
 ## Technologies

@@ -13,6 +13,8 @@ void startTimer(TimerState& state, int argc, char* argv[]);
 
 long calcElapsedSeconds (const long long startTime, const long long nowMs);
 
+std::string formatDuration (long seconds);
+
 std::string toLowerCase (std::string taskName);
 
 std::vector<TimerRecord> findMatches(const std::vector<TimerRecord>& timers,std::string taskName);
